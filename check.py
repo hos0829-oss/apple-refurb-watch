@@ -2,8 +2,8 @@
 """Apple整備済製品ストア（日本）の在庫を確認し、対象モデルが入荷したら通知する。
 
 通知先:
-  1. ntfy.sh（環境変数 NTFY_TOPIC があれば、そのトピックへプッシュ通知）
-  2. GitHub Issue（このリポジトリに Issue を作成 → GitHub からメール通知が届く）
+  1. ntfy.sh（環境変数 NTFY_TOPIC があれば、そのトピックへプッシュ通知。NOTIFY_EMAIL があればメールも）
+  2. GitHub Issue（このリポジトリに Issue を作成。入荷履歴の記録用）
 状態は state.json に保存し、「なし→あり」に変わった時だけ通知する。
 """
 import datetime
@@ -77,6 +77,8 @@ def notify_ntfy(title, message, click=None, priority=4):
     body = {"topic": topic, "title": title, "message": message, "priority": priority, "tags": ["iphone"]}
     if click:
         body["click"] = click
+    if os.environ.get("NOTIFY_EMAIL"):  # ntfy からメールも送る
+        body["email"] = os.environ["NOTIFY_EMAIL"]
     req = urllib.request.Request("https://ntfy.sh/", data=json.dumps(body).encode("utf-8"),
                                  headers={"Content-Type": "application/json"}, method="POST")
     with urllib.request.urlopen(req, timeout=30) as r:
