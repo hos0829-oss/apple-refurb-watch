@@ -2,8 +2,8 @@
 """Apple整備済製品ストア（日本）の在庫を確認し、対象モデルが入荷したら通知する。
 
 通知先:
-  1. ntfy.sh（環境変数 NTFY_TOPIC があれば、そのトピックへプッシュ通知。NOTIFY_EMAIL があればメールも）
-  2. GitHub Issue（このリポジトリに Issue を作成。入荷履歴の記録用）
+  1. ntfy.sh（環境変数 NTFY_TOPIC があれば、そのトピックへプッシュ通知）
+  2. GitHub Issue（リポジトリ所有者を担当者にして Issue を作成 → GitHub からメール通知が届く）
 状態は state.json に保存し、「なし→あり」に変わった時だけ通知する。
 """
 import datetime
@@ -77,8 +77,6 @@ def notify_ntfy(title, message, click=None, priority=4):
     body = {"topic": topic, "title": title, "message": message, "priority": priority, "tags": ["iphone"]}
     if click:
         body["click"] = click
-    if os.environ.get("NOTIFY_EMAIL"):  # ntfy からメールも送る
-        body["email"] = os.environ["NOTIFY_EMAIL"]
     req = urllib.request.Request("https://ntfy.sh/", data=json.dumps(body).encode("utf-8"),
                                  headers={"Content-Type": "application/json"}, method="POST")
     with urllib.request.urlopen(req, timeout=30) as r:
@@ -101,6 +99,17 @@ def gh_api(method, path, data=None):
         return json.loads(r.read() or b"{}")
 
 
+def owner():
+    return os.environ.get("GITHUB_REPOSITORY_OWNER", "")
+
+
+def new_issue(title, body):
+    data = {"title": title, "body": f"@{owner()}\n\n{body}" if owner() else body}
+    if owner():
+        data["assignees"] = [owner()]
+    return gh_api("POST", "/issues", data)
+
+
 def product_url(tile):
     return "https://www.apple.com" + tile["productDetailsUrl"].split("?")[0]
 
@@ -114,8 +123,8 @@ def main():
     if os.environ.get("TEST_NOTIFY") == "true":
         print("テスト通知を送信")
         notify_ntfy("テスト通知: 在庫監視が動いています", f"{LABEL}\n{now()} 時点では在庫なし。入荷したらこの形で通知します。", click=URL)
-        issue = gh_api("POST", "/issues", {"title": "テスト通知（在庫監視の動作確認）",
-                                           "body": f"{now()}\n\n{LABEL} の監視が動いています。入荷すると同じ形で Issue が立ち、メールが届きます。"})
+        issue = new_issue("テスト通知（在庫監視の動作確認）",
+                          f"{now()}\n\n{LABEL} の監視が動いています。入荷すると同じ形で Issue が立ち、メールが届きます。")
         print("テスト Issue:", issue.get("html_url"))
 
     try:
@@ -144,10 +153,8 @@ def main():
     if in_stock and (not state["in_stock"] or parts != state["parts"]):
         print("入荷を検知 → 通知")
         notify_ntfy(f"在庫あり {price}: {LABEL}", f"{now()} 確認\n{link}", click=link, priority=5)
-        issue = gh_api("POST", "/issues", {
-            "title": f"🟢 在庫あり {price} — {LABEL}",
-            "body": f"{now()} に在庫を確認しました。\n\n**{price}**\n\n{link}\n\n(部品番号: {', '.join(parts)})",
-        })
+        issue = new_issue(f"🟢 在庫あり {price} — {LABEL}",
+                          f"{now()} に在庫を確認しました。\n\n**{price}**\n\n{link}\n\n(部品番号: {', '.join(parts)})")
         state["issue"] = issue.get("number")
         state["last_changed"] = now()
     elif not in_stock and state["in_stock"]:

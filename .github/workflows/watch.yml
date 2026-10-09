@@ -29,7 +29,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
           TEST_NOTIFY: ${{ inputs.test }}
         run: python3 -I check.py
 
