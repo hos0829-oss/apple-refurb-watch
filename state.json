@@ -1,5 +1,7 @@
 {
   "in_stock": false,
   "parts": [],
-  "errors": 0
+  "errors": 0,
+  "last_checked_date": "2026-10-09",
+  "price": null
 }
