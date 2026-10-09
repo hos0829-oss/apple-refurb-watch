@@ -114,8 +114,7 @@ def main():
         notify_ntfy("テスト通知: 在庫監視が動いています", f"{LABEL}\n{now()} 時点では在庫なし。入荷したらこの形で通知します。", click=URL)
         issue = gh_api("POST", "/issues", {"title": "テスト通知（在庫監視の動作確認）",
                                            "body": f"{now()}\n\n{LABEL} の監視が動いています。入荷すると同じ形で Issue が立ち、メールが届きます。"})
-        if issue.get("number"):
-            gh_api("PATCH", f"/issues/{issue['number']}", {"state": "closed"})
+        print("テスト Issue:", issue.get("html_url"))
 
     try:
         tiles = fetch_tiles()
