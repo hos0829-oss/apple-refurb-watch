@@ -1,6 +1,6 @@
 name: watch
 
-# 1回の実行で最大 52 分間、5 分おきに在庫を確認し、終了時に次の実行を自分で起動する（連鎖）。
+# 1回の実行で最大 52 分間、1 分おきに在庫を確認し、終了時に次の実行を自分で起動する（連鎖）。
 # GitHub の時刻起動（cron）は遅延・間引きされることがあるので、連鎖が切れた時の再開用に毎時 1 回だけ置いている。
 on:
   schedule:
@@ -36,7 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 在庫チェック（5分おき）
+      - name: 在庫チェック（1分おき）
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
@@ -57,7 +57,7 @@ jobs:
               git push -q || { git pull -q --rebase origin main && git push -q; }
             fi
             [ "$SECONDS" -ge "$end" ] && break
-            sleep 300
+            sleep 60
           done
           exit $failed
 

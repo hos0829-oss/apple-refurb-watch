@@ -4,7 +4,7 @@ Apple 整備済製品ストア（日本）の在庫を定期的に確認し、
 **iPhone 15 Pro 256GB（全色）** が入荷したら通知します（新しい色が一覧に現れるたびに通知）。
 
 - 監視ページ: https://www.apple.com/jp/shop/refurbished/iphone/iphone-15-pro
-- 実行: GitHub Actions（`.github/workflows/watch.yml`）。1回の実行で最大52分間・5分おきに確認し、終了時に次の実行を自分で起動する（連鎖）。
+- 実行: GitHub Actions（`.github/workflows/watch.yml`）。1回の実行で最大52分間・1分おきに確認し、終了時に次の実行を自分で起動する（連鎖）。
   GitHub の時刻起動は遅延・間引きされるため、毎時1回の `cron` は連鎖が切れた時の再開用。
 - 止めるとき: Actions タブ → watch → 右上「…」→ Disable workflow（実行中のものはキャンセル）。
 - 通知:

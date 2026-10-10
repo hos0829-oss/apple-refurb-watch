@@ -143,8 +143,8 @@ def main():
         state["last_error"] = f"{now()} {e}"
         save_state(state)
         print("取得失敗:", e)
-        # 最初の失敗と、その後は失敗が続く間 1日1回（5分間隔×288回）だけ run を失敗させてメールで知らせる
-        if state["errors"] == 1 or state["errors"] % 288 == 0:
+        # 最初の失敗と、その後は失敗が続く間 1日1回（1分間隔×1440回）だけ run を失敗させてメールで知らせる
+        if state["errors"] == 1 or state["errors"] % 1440 == 0:
             sys.exit(1)
         return
 
