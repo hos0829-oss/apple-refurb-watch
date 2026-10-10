@@ -1,12 +1,10 @@
 {
-  "in_stock": true,
-  "parts": [
-    "FTUD3J/A"
-  ],
+  "in_stock": false,
+  "parts": [],
   "errors": 0,
   "last_checked_date": "2026-10-10",
-  "price": "134,800円",
-  "issue": 7,
-  "last_changed": "2026-10-10 20:32 JST",
+  "price": null,
+  "issue": null,
+  "last_changed": "2026-10-10 20:33 JST",
   "last_seen": "2026-10-10 20:32 JST"
 }
