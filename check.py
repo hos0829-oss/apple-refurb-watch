@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Apple整備済製品ストア（日本）の在庫を確認し、対象モデルが入荷したら通知する。
+"""Apple整備済製品ストア（日本）の在庫を確認し、対象モデル（全色）が入荷したら通知する。
 
 通知先:
   1. ntfy.sh（環境変数 NTFY_TOPIC があれば、そのトピックへプッシュ通知）
   2. GitHub Issue（リポジトリ所有者を担当者にして Issue を作成 → GitHub からメール通知が届く）
-状態は state.json に保存し、「なし→あり」に変わった時だけ通知する。
+状態は state.json に保存し、新しい色（部品番号）が一覧に現れた時だけ通知する。
 """
 import datetime
 import json
@@ -18,9 +18,8 @@ URL = "https://www.apple.com/jp/shop/refurbished/iphone/iphone-15-pro"
 TARGET = {
     "refurbClearModel": "iphone15pro",
     "dimensionCapacity": "256gb",
-    "dimensionColor": "whitetitanium",
 }
-LABEL = "iPhone 15 Pro 256GB ホワイトチタニウム（整備済製品）"
+LABEL = "iPhone 15 Pro 256GB（整備済製品・全色）"
 STATE_FILE = "state.json"
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
       "(KHTML, like Gecko) Version/17.0 Safari/605.1.15")
@@ -114,6 +113,16 @@ def product_url(tile):
     return "https://www.apple.com" + tile["productDetailsUrl"].split("?")[0]
 
 
+def color_of(tile):
+    # 例: "iPhone 15 Pro 256GB - ホワイトチタニウム（SIMフリー）[整備済製品]" → "ホワイトチタニウム"
+    t = tile.get("title", "")
+    return t.split(" - ", 1)[1].split("（")[0] if " - " in t else tile.get("partNumber", "")
+
+
+def describe(hits):
+    return "、".join(f"{color_of(h)} {h['price']['currentPrice']['amount']}" for h in hits)
+
+
 def main():
     state = load_state()
     state.setdefault("in_stock", False)
@@ -139,23 +148,31 @@ def main():
             sys.exit(1)
         return
 
-    hits = find_target(tiles)
+    hits = sorted(find_target(tiles), key=lambda h: h["partNumber"])
     in_stock = bool(hits)
-    parts = sorted(h["partNumber"] for h in hits)
+    parts = [h["partNumber"] for h in hits]
     price = hits[0]["price"]["currentPrice"]["amount"] if hits else None
     link = product_url(hits[0]) if hits else URL
-    print(f"{now()} tiles={len(tiles)} target_hits={len(hits)} parts={parts} price={price}")
+    new_hits = [h for h in hits if h["partNumber"] not in state["parts"]]
+    print(f"{now()} tiles={len(tiles)} target_hits={len(hits)} parts={parts} new={len(new_hits)} price={price}")
 
     state["errors"] = 0
     state.pop("last_error", None)
     state["last_checked_date"] = today()
 
-    if in_stock and (not state["in_stock"] or parts != state["parts"]):
-        print("入荷を検知 → 通知")
-        notify_ntfy(f"在庫あり {price}: {LABEL}", f"{now()} 確認\n{link}", click=link, priority=5)
-        issue = new_issue(f"🟢 在庫あり {price} — {LABEL}",
-                          f"{now()} に在庫を確認しました。\n\n**{price}**\n\n{link}\n\n(部品番号: {', '.join(parts)})")
-        state["issue"] = issue.get("number")
+    if new_hits:
+        print("入荷を検知 → 通知:", describe(new_hits))
+        link = product_url(new_hits[0])
+        notify_ntfy(f"在庫あり: iPhone 15 Pro 256GB {describe(new_hits)}",
+                    f"{now()} 確認\n{link}", click=link, priority=5)
+        body = (f"{now()} に在庫を確認しました。\n\n**{describe(new_hits)}**\n\n"
+                + "\n".join(f"- {color_of(h)}: {product_url(h)}" for h in new_hits)
+                + f"\n\n(部品番号: {', '.join(h['partNumber'] for h in new_hits)})")
+        if state.get("issue") and state["in_stock"]:
+            gh_api("POST", f"/issues/{state['issue']}/comments", {"body": f"@{owner()} 追加入荷: {describe(new_hits)}\n\n{body}"})
+        else:
+            issue = new_issue(f"🟢 在庫あり — iPhone 15 Pro 256GB {describe(new_hits)}", body)
+            state["issue"] = issue.get("number")
         state["last_changed"] = now()
     elif not in_stock and state["in_stock"]:
         print("売り切れを検知")
